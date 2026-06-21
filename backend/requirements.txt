@@ -1,0 +1,12 @@
+# Web framework and ASGI server
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+
+# Database ORM and driver
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10  # PostgreSQL adapter (binary wheel, no libpq build needed)
+alembic==1.13.1           # Database migration tool (for production use)
+
+# Data validation and settings
+pydantic[email]==2.10.4   # Includes email-validator for EmailStr support
+python-dotenv==1.0.1      # Loads .env file into os.environ at startup
