@@ -2,15 +2,50 @@
 
 A full-stack application for managing products, customers, and orders with real-time inventory tracking.
 
-**Stack:** FastAPI · PostgreSQL · React · Docker
+**Stack:** FastAPI · PostgreSQL · SQLAlchemy · Alembic · React 19 · Vite · Tailwind CSS · Docker
+
+---
+
+## Live Demo
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://inventory-management-system-pi-olive.vercel.app |
+| Backend API | https://inventory-management-system-production-4409.up.railway.app |
+| API Docs (Swagger) | https://inventory-management-system-production-4409.up.railway.app/docs |
+
+---
+
+## Docker Hub
+
+```bash
+docker pull jaspreetsingh19/inventory-backend:latest
+```
+
+Image: [hub.docker.com/r/jaspreetsingh19/inventory-backend](https://hub.docker.com/r/jaspreetsingh19/inventory-backend)
 
 ---
 
 ## Project Structure
 
 ```
-├── backend/       # FastAPI Python API
-├── frontend/      # React (Vite) UI
+├── backend/
+│   ├── app/
+│   │   ├── main.py          # FastAPI app, CORS, routes
+│   │   ├── database.py      # SQLAlchemy engine & session
+│   │   ├── models.py        # ORM models (Product, Customer, Order, OrderItem)
+│   │   ├── schemas.py       # Pydantic v2 request/response schemas
+│   │   └── routers/         # products, customers, orders, dashboard
+│   ├── tests/               # pytest suite (76 tests, ~99% coverage)
+│   ├── alembic/             # Database migrations
+│   ├── requirements.txt
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   │   ├── pages/           # Dashboard, Products, Customers, Orders
+│   │   ├── components/      # Navbar, Modal, ConfirmDialog
+│   │   └── api/             # Axios API clients
+│   └── Dockerfile
 ├── docker-compose.yml
 └── .env.example
 ```
@@ -48,13 +83,9 @@ docker compose down
 
 ### Prerequisites
 
-- Python 3.12+ (via pyenv or system install)
+- Python 3.12+
 - Node.js 20+
 - PostgreSQL running locally
-
-> **pip build errors?** Run `pip install --upgrade pip` inside your venv before
-> installing requirements. pip 23.x cannot find pre-built wheels for
-> `psycopg2-binary` and `pydantic-core`; pip 24+ resolves this automatically.
 
 ---
 
@@ -63,11 +94,11 @@ docker compose down
 ```bash
 cd backend
 
-# Create a venv using Python 3.12 (adjust path if not using pyenv)
-~/.pyenv/versions/3.12.0/bin/python3.12 -m venv venv
+# Create and activate a virtual environment
+python3.12 -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 
-# Upgrade pip first (required — older pip fails to find pre-built wheels)
+# Upgrade pip first (required for pre-built wheels)
 pip install --upgrade pip
 
 # Install dependencies
@@ -75,7 +106,7 @@ pip install -r requirements.txt
 
 # Copy and configure the .env file
 cp ../.env.example ../.env
-# Edit DATABASE_URL in .env to match your local PostgreSQL credentials
+# Edit DATABASE_URL to match your local PostgreSQL credentials
 
 # Run database migrations
 alembic upgrade head
@@ -84,15 +115,7 @@ alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
 
-API available at **http://localhost:8000** · Docs at **http://localhost:8000/docs**
-
-**Alembic cheatsheet:**
-```bash
-alembic upgrade head                        # apply all pending migrations
-alembic revision --autogenerate -m "msg"   # generate migration from model changes
-alembic downgrade -1                        # roll back one migration
-alembic current                             # show current DB revision
-```
+API: **http://localhost:8000** · Docs: **http://localhost:8000/docs**
 
 ---
 
@@ -101,48 +124,70 @@ alembic current                             # show current DB revision
 ```bash
 cd frontend
 
-# Install dependencies
 npm install
 
-# Set the backend URL (or create a .env file with this line)
+# Start the dev server (set backend URL in .env or export below)
 export VITE_API_URL=http://localhost:8000
-
-# Start the dev server
 npm run dev
 ```
 
-App available at **http://localhost:5173**
+App: **http://localhost:5173**
+
+---
+
+## Running Tests
+
+```bash
+cd backend
+source venv/bin/activate
+pytest --cov=app --cov-report=term-missing
+```
+
+76 tests · ~99% coverage · PostgreSQL-backed (no mocks)
 
 ---
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in your values:
+Copy `.env.example` to `.env`:
 
-| Variable          | Description                        | Default                  |
-|-------------------|------------------------------------|--------------------------|
-| `POSTGRES_USER`   | PostgreSQL username                | `inventory_user`         |
-| `POSTGRES_PASSWORD` | PostgreSQL password              | `changeme`               |
-| `POSTGRES_DB`     | Database name                      | `inventory`              |
-| `VITE_API_URL`    | Backend URL used by the frontend   | `http://localhost:8000`  |
+| Variable            | Description                      | Default                  |
+|---------------------|----------------------------------|--------------------------|
+| `DATABASE_URL`      | Full PostgreSQL connection string | postgresql://...         |
+| `POSTGRES_USER`     | PostgreSQL username               | `inventory_user`         |
+| `POSTGRES_PASSWORD` | PostgreSQL password               | `changeme`               |
+| `POSTGRES_DB`       | Database name                     | `inventory`              |
+| `VITE_API_URL`      | Backend URL used by the frontend  | `http://localhost:8000`  |
 
 ---
 
 ## API Endpoints
 
-| Method | Endpoint               | Description              |
-|--------|------------------------|--------------------------|
-| POST   | `/products`            | Create product           |
-| GET    | `/products`            | List all products        |
-| GET    | `/products/{id}`       | Get product by ID        |
-| PUT    | `/products/{id}`       | Update product           |
-| DELETE | `/products/{id}`       | Delete product           |
-| POST   | `/customers`           | Create customer          |
-| GET    | `/customers`           | List all customers       |
-| GET    | `/customers/{id}`      | Get customer by ID       |
-| DELETE | `/customers/{id}`      | Delete customer          |
-| POST   | `/orders`              | Place an order           |
-| GET    | `/orders`              | List all orders          |
-| GET    | `/orders/{id}`         | Get order by ID          |
-| DELETE | `/orders/{id}`         | Cancel order             |
-| GET    | `/dashboard/summary`   | Dashboard stats          |
+| Method | Endpoint             | Description            |
+|--------|----------------------|------------------------|
+| GET    | `/health`            | Health check           |
+| POST   | `/products`          | Create product         |
+| GET    | `/products`          | List all products      |
+| GET    | `/products/{id}`     | Get product by ID      |
+| PUT    | `/products/{id}`     | Update product         |
+| DELETE | `/products/{id}`     | Delete product         |
+| POST   | `/customers`         | Create customer        |
+| GET    | `/customers`         | List all customers     |
+| GET    | `/customers/{id}`    | Get customer by ID     |
+| DELETE | `/customers/{id}`    | Delete customer        |
+| POST   | `/orders`            | Place an order         |
+| GET    | `/orders`            | List all orders        |
+| GET    | `/orders/{id}`       | Get order by ID        |
+| DELETE | `/orders/{id}`       | Cancel order           |
+| GET    | `/dashboard/summary` | Dashboard stats        |
+
+---
+
+## Alembic Cheatsheet
+
+```bash
+alembic upgrade head                       # apply all pending migrations
+alembic revision --autogenerate -m "msg"  # generate migration from model changes
+alembic downgrade -1                       # roll back one migration
+alembic current                            # show current revision
+```
