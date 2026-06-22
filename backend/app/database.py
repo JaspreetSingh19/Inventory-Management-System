@@ -22,6 +22,13 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localho
 """str: Full PostgreSQL connection string.  Read from the ``DATABASE_URL``
 environment variable; falls back to a local development default."""
 
+# Railway/Render supply postgres:// or postgresql:// — normalise to the
+# psycopg2 driver scheme that SQLAlchemy requires.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "+psycopg2" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
 engine = create_engine(DATABASE_URL)
 """sqlalchemy.engine.Engine: Shared SQLAlchemy engine bound to the configured
 database.  All sessions are created through this engine."""
